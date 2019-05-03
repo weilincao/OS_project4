@@ -259,26 +259,31 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	}
   	case(SYS_SEEK):{
-		if(is_invalid(f->esp+8)) force_exit();
-  		int fd=*(( int*)(f->esp+4));
-  		int position=*(( int*)(f->esp+8));
-  		struct list_elem* e = elem_with_fd(fd);
-  		if(e == NULL)
-  		{
-  			printf("seek -1\n");
+		  int fd=*(( int*)(f->esp+4));
+      int position=*(( int*)(f->esp+8));
+      struct list_elem* e = elem_with_fd(fd);
+      if(e == NULL)
+      {
         force_exit();
-  		}
-  		else
-  		{
-  			struct fd_entry *fd_ptr = list_entry(e, struct fd_entry, elem);
-  			//Set the next place to be read to the beginning plus the bytes given
-  			fd_ptr->file_ptr = (((char*)fd_ptr->file_ptr) + position);
-
-  		}
-  		break;
+      }
+      else
+      {
+        struct fd_entry *fd_ptr = list_entry(e, struct fd_entry, elem);
+        //Set the next place to be read to the beginning plus the bytes given
+        file_seek(fd_ptr->file_ptr, position);
+      }
+      break;
   	}
   	case(SYS_TELL):{
   		//TODO: actually do this case
+      int fd=*(( int*)(f->esp+4));
+      struct list_elem* e = elem_with_fd(fd);
+      if(e == NULL) {
+        force_exit();
+      } else {
+        struct fd_entry *fd_ptr = list_entry(e, struct fd_entry, elem);
+        f->eax = file_tell(fd_ptr->file_ptr);
+      }
   		break;
   	}
   	case(SYS_CLOSE):{
