@@ -2,8 +2,9 @@
 
 # Change this to have the test(s) you want to run
 TEST_FILES='
-args-none
-dir-mk-tree
+grow-file-size
+grow-seq-sm
+grow-seq-lg
 '
 
 for file in $TEST_FILES; do

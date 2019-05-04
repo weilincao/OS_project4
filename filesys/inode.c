@@ -7,17 +7,37 @@
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 
+
+#define NUMBER_OF_DIRECT_POINTERS 120
+#define NUMBER_OF_INDIRECT_POINTERS 3
+#define NUMBER_OF_DOUBLE_INDIRECT_POINTERS 1
+#define NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE 127 //512 bytes should be 128, but just be safe
+
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
+
+
+/*
+self-explanatory
+*/
+struct indirect_table{
+  uint32_t indirect_table_entries[NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE];
+}
+
 
 /* On-disk inode.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
   {
-    block_sector_t start;               /* First data sector. */
+    //block_sector_t start;               /* First data sector. */
+
+    uint32_t direct_ptr[NUMBER_OF_DIRECT_POINTERS];
+    uint32_t indirect_ptr[NUMBER_OF_INDIRECT_POINTERS];
+    uint32_t double_indirect_ptr;
+
+    bool is_directory;
     off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
-    uint32_t unused[125];               /* Not used. */
   };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -38,6 +58,128 @@ struct inode
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;             /* Inode content. */
   };
+
+/*
+grow the size of the given inode located in disk to the given new size
+the new portion that is grown are initialized with zeros.
+
+return 1 if the process is successful, -1 otherwise 
+
+note: right now, double indirect pointer is not yet implemented
+
+*/
+int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
+{
+  static char zeros[BLOCK_SECTOR_SIZE];
+
+  if (new_size< 0)
+  {
+    printf("Oh no, the given size is negative\n");
+    return -1;
+  }
+
+
+
+
+  int num_of_sectors = bytes_to_sectors(new_size);
+
+  //divide the number of sectors into three section:
+  int num_of_sectors_for_direct_ptr=0;
+  int num_of_sectors_for_indirect_ptr=0;
+  int num_of_sectors_for_double_indirect_ptr=0;
+
+  // first detemine number of sectors need to be allocated for each of the 3 types of pointers
+  if(num_of_sectors> NUMBER_OF_DIRECT_POINTERS)
+  {
+    num_of_sectors_for_direct_ptr=NUMBER_OF_DIRECT_POINTERS;
+
+    if(   (num_of_sectors-NUMBER_OF_DIRECT_POINTERS) <  (NUMBER_OF_INDIRECT_POINTERS*NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE)   )
+    {
+      num_of_sectors_for_indirect_ptr=num_of_sectors-NUMBER_OF_DIRECT_POINTERS;
+    }
+    else
+    {
+      num_of_sectors_for_indirect_ptr=NUMBER_OF_INDIRECT_POINTERS*NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE;
+      num_of_sectors_for_double_indirect_ptr=num_of_sectors-NUMBER_OF_DIRECT_POINTERS-num_of_sectors_for_indirect_ptr;
+    }
+  }
+  else
+  {
+    num_of_sectors_for_direct_ptr=num_of_sectors;
+  }
+
+  //direct pointer allocation:
+  for(int i =0; i< num_of_sectors_for_direct_ptr; i++)
+  {
+    
+    if(disk_inode->direct_ptr[i]==NULL)//if the sector is not yet allocated
+    {
+      if(! free_map_allocate (1, &disk_inode->direct_ptr[i])){
+        printf("inode bitmap allocate failed during grow file size\n");
+        return -1;
+      }
+      block_write (fs_device, disk_inode->direct_ptr[i], zeros);
+    }
+  }
+
+
+  //now the indirect pointer allocation:
+  struct indirect_table* table_buffer= malloc(sizeof(struct indirect_table));;
+
+  for(int i =0 ; i<num_of_sectors_for_indirect_ptr; i++)
+  {
+    int index_indirect_ptr=i/NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE;
+    int index_indirect_ptr_table=i%NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE;
+
+
+    //allocate a sector if the current indirect pointer is empty
+    if(disk_inode->indirect_ptr[index_indirect_ptr]==NULL)
+    {
+      if(! free_map_allocate (1, &disk_inode->indirect_ptr[index_indirect_ptr]))
+      {
+      printf("inode bitmap allocate failed during grow file size\n");
+      return -1;
+      }    
+      block_write (fs_device, disk_inode->indirect_ptr[index_indirect_ptr], zeros);
+
+    }
+
+    //load the indirect table from disk to the table buffer whenever the loop reach the beginning of the the table
+    if(index_indirect_ptr_table==0)
+    {
+       block_read (fs_device, disk_inode->indirect_pointer[index_indirect_ptr], table_buffer);
+    }
+
+    //allocate a sector if the current table entries is empty
+    if(table_buffer->indirect_table_entries[index_indirect_ptr_table]==NULL)
+    {
+      if(! free_map_allocate (1, &table_buffer->indirect_table_entries[index_indirect_ptr_table]))
+      {
+      printf("inode bitmap allocate failed during grow file size\n");
+      return -1;
+      }    
+      block_write (fs_device, table_buffer->indirect_table_entries[index_indirect_ptr_table], zeros);
+    }
+
+    //whenever the loop is going to end or the buffer table reaches the end, write back to the actual disk
+    if(index_indirect_ptr_table==NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE-1 || index_indirect_ptr_table == num_of_sectors_for_indirect_ptr-1 )
+    {
+      block_write (fs_device, disk_inode->indirect_pointer[index_indirect_ptr], table_buffer);
+    }
+
+
+
+  }
+  free(table_buffer);
+
+  disk_inode->length=new_size;
+  return 1;
+
+  //indirect table is already a total mess, so I am not going to implement double indirect ptr for now
+}
+
+
+
 
 /* Returns the block device sector that contains byte offset POS
    within INODE.
@@ -84,22 +226,14 @@ inode_create (block_sector_t sector, off_t length)
   disk_inode = calloc (1, sizeof *disk_inode);
   if (disk_inode != NULL)
     {
-      size_t sectors = bytes_to_sectors (length);
-      disk_inode->length = length;
+      disk_inode->length = 0;
       disk_inode->magic = INODE_MAGIC;
-      if (free_map_allocate (sectors, &disk_inode->start))
+      if (grow_file_size (&disk_inode, length) )
         {
-          block_write (fs_device, sector, disk_inode);
-          if (sectors > 0)
-            {
-              static char zeros[BLOCK_SECTOR_SIZE];
-              size_t i;
-
-              for (i = 0; i < sectors; i++)
-                block_write (fs_device, disk_inode->start + i, zeros);
-            }
+          block_write (fs_device, sector, disk_inode);//writing the inode
           success = true;
         }
+
       free (disk_inode);
     }
   return success;
