@@ -2,6 +2,7 @@
 
 # Change this to have the test(s) you want to run
 TEST_FILES='
+args-none
 grow-file-size
 grow-seq-sm
 grow-seq-lg

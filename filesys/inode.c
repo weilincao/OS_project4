@@ -9,9 +9,9 @@
 
 
 #define NUMBER_OF_DIRECT_POINTERS 120
-#define NUMBER_OF_INDIRECT_POINTERS 3
+#define NUMBER_OF_INDIRECT_POINTERS 4
 #define NUMBER_OF_DOUBLE_INDIRECT_POINTERS 1
-#define NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE 127 //512 bytes should be 128, but just be safe
+#define NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE 128 //512/4
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -22,7 +22,7 @@ self-explanatory
 */
 struct indirect_table{
   uint32_t indirect_table_entries[NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE];
-}
+};
 
 
 /* On-disk inode.
@@ -111,8 +111,8 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
   //direct pointer allocation:
   for(int i =0; i< num_of_sectors_for_direct_ptr; i++)
   {
-    
-    if(disk_inode->direct_ptr[i]==NULL)//if the sector is not yet allocated
+    //printf("direct_ptr is %d\n", disk_inode->direct_ptr[i]);
+    if(disk_inode->direct_ptr[i]==0)//if the sector is not yet allocated
     {
       if(! free_map_allocate (1, &disk_inode->direct_ptr[i])){
         printf("inode bitmap allocate failed during grow file size\n");
@@ -147,7 +147,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
     //load the indirect table from disk to the table buffer whenever the loop reach the beginning of the the table
     if(index_indirect_ptr_table==0)
     {
-       block_read (fs_device, disk_inode->indirect_pointer[index_indirect_ptr], table_buffer);
+       block_read (fs_device, disk_inode->indirect_ptr[index_indirect_ptr], table_buffer);
     }
 
     //allocate a sector if the current table entries is empty
@@ -164,7 +164,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
     //whenever the loop is going to end or the buffer table reaches the end, write back to the actual disk
     if(index_indirect_ptr_table==NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE-1 || index_indirect_ptr_table == num_of_sectors_for_indirect_ptr-1 )
     {
-      block_write (fs_device, disk_inode->indirect_pointer[index_indirect_ptr], table_buffer);
+      block_write (fs_device, disk_inode->indirect_ptr[index_indirect_ptr], table_buffer);
     }
 
 
@@ -185,12 +185,39 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
    within INODE.
    Returns -1 if INODE does not contain data for a byte at offset
    POS. */
+/*
+  modified for growing file size, however, currently, lock mechanism is needed,
+  at the same time, double indirect pointer is no yet implment.
+*/
 static block_sector_t
 byte_to_sector (const struct inode *inode, off_t pos)
 {
   ASSERT (inode != NULL);
   if (pos < inode->data.length)
-    return inode->data.start + pos / BLOCK_SECTOR_SIZE;
+  {
+    
+    if(pos< (BLOCK_SECTOR_SIZE*NUMBER_OF_DIRECT_POINTERS) )
+      return inode->data.direct_ptr[pos / BLOCK_SECTOR_SIZE];
+    else if(pos < (BLOCK_SECTOR_SIZE*NUMBER_OF_DIRECT_POINTERS+NUMBER_OF_INDIRECT_POINTERS*NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE*BLOCK_SECTOR_SIZE ) )
+    {
+      int num_of_sectors_for_indirect_ptr= (pos-NUMBER_OF_DIRECT_POINTERS*BLOCK_SECTOR_SIZE)/BLOCK_SECTOR_SIZE;
+      int index_indirect_ptr= num_of_sectors_for_indirect_ptr/BLOCK_SECTOR_SIZE;
+      int index_indirect_ptr_table=num_of_sectors_for_indirect_ptr%BLOCK_SECTOR_SIZE;
+
+      struct indirect_table *table_buffer = malloc(sizeof(struct indirect_table));
+      block_read(fs_device, inode->data.indirect_ptr[index_indirect_ptr], table_buffer);
+      uint32_t return_sector = table_buffer->indirect_table_entries[index_indirect_ptr_table];
+      free(table_buffer);
+      return return_sector;
+
+    }
+    else
+    {
+      printf("oh no! you need to use double indirect pointer, however, we have not implement it yet!\n"); 
+      return -2;
+
+    }
+  }
   else
     return -1;
 }
@@ -226,9 +253,9 @@ inode_create (block_sector_t sector, off_t length)
   disk_inode = calloc (1, sizeof *disk_inode);
   if (disk_inode != NULL)
     {
-      disk_inode->length = 0;
+      disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
-      if (grow_file_size (&disk_inode, length) )
+      if (grow_file_size (disk_inode, length) )
         {
           block_write (fs_device, sector, disk_inode);//writing the inode
           success = true;
@@ -236,6 +263,7 @@ inode_create (block_sector_t sector, off_t length)
 
       free (disk_inode);
     }
+
   return success;
 }
 
@@ -291,12 +319,35 @@ inode_get_inumber (const struct inode *inode)
   return inode->sector;
 }
 
+
+void free_map_release_disk_inode(struct inode_disk* disk_inode)
+{
+  size_t num_of_sectors = bytes_to_sectors(disk_inode->length);  // number of sectors to be allocated (will decrease as we allocate)
+
+  // direct pointers
+  int n = num_of_sectors < NUMBER_OF_DIRECT_POINTERS ? num_of_sectors : NUMBER_OF_DIRECT_POINTERS;
+  for (int i=0; i < n; i++)
+    free_map_release (disk_inode->direct_ptr[i], 1);
+  num_of_sectors -= n;
+  if (num_of_sectors == 0) return;
+
+  //need to implement indirect pointer and double indirect pointer
+  return;
+}
+
+
+
 /* Closes INODE and writes it to disk.
    If this was the last reference to INODE, frees its memory.
    If INODE was also a removed inode, frees its blocks. */
+/*
+  this function is modify for growing file size, however,
+  I have not add deallocation mechanism in it yet.
+*/
 void
 inode_close (struct inode *inode)
 {
+  //printf("closing inode!\n"); 
   /* Ignore null pointer. */
   if (inode == NULL)
     return;
@@ -311,8 +362,9 @@ inode_close (struct inode *inode)
       if (inode->removed)
         {
           free_map_release (inode->sector, 1);
-          free_map_release (inode->data.start,
-                            bytes_to_sectors (inode->data.length));
+          free_map_release_disk_inode(&inode->data);
+          //free_map_release (inode->data.start,
+          //                  bytes_to_sectors (inode->data.length));
         }
 
       free (inode);
@@ -388,6 +440,12 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
    less than SIZE if end of file is reached or an error occurs.
    (Normally a write at end of file would extend the inode, but
    growth is not yet implemented.) */
+
+/*
+  this method has been modified for growing file size
+
+  !!!notice: currently, there is no synchronization mechanism
+*/
 off_t
 inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                 off_t offset)
@@ -412,8 +470,24 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
       /* Number of bytes to actually write into this sector. */
       int chunk_size = size < min_left ? size : min_left;
-      if (chunk_size <= 0)
-        break;
+
+      if (chunk_size <= 0)//start allocating if the inode length is less than offset
+      {
+        if (!grow_file_size(&inode->data, offset+size)) 
+        {
+            printf("fail to grow the file during write!\n");
+            return -1;
+        }
+        else
+        {
+          //bool lock_held = lock_held_by_current_thread (&inode->lock_inode);
+          //if (!lock_held) lock_acquire(&inode->lock_inode);
+          inode->data.length = offset + size;
+          //if (!lock_held) lock_release(&inode->lock_inode);
+          block_write (fs_device, inode->sector, &inode->data);  
+          continue; // now the allocated space is enough, redo the loop.
+        }
+      }
 
       if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
         {
