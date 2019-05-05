@@ -239,21 +239,40 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 
 
 struct dir * get_dir_from_path (char* path){
-/*
+
+  char* path_copy=malloc(strlen(path)+1); //because the strtok will modify the string and we probably don't want original path got modify, or do we?
+  char* ptr=path_copy;
   struct dir* current_dir;
 
   if(path[0]=='/')
   {
     current_dir=dir_open_root();
+    path++;
   }
   else
   {
-    current_dir=thread_current()->current_working_dir;
+    current_dir=dir_reopen(thread_current()->current_working_dir);
   }
-*/
+  char *token, *saveptr;
+  token = strtok_r(ptr, "/", &saveptr);
 
+  while (token != NULL) {
 
+    struct inode *inode;
 
+    if(! dir_lookup(current_dir, token, &inode)) {
+      dir_close(cur);
+      free(path);
+      return NULL; // such directory not exist
+    }
+    dir_close(current_dir);
+    current_dir=dir_open(inode);
+    token = strtok_r(NULL, "/", &saveptr);
+  }
+  free(path_copy);
+
+  
+  return current_dir;
 }
 
 
@@ -267,9 +286,7 @@ void extract_filename_and_path(char* input, char* filename, char* path)
   }
 
   char* ptr= input+ strlen(input)-1; //the pointer points to the last charater
-  int filename_length=0;
-
-
+  int filename_length=1;
 
   while( ptr!=input && *(ptr-1) != '/' ) //if pointer is already the first letter of input, stop; if pointer +1 is /, stop as well
   {
@@ -278,8 +295,14 @@ void extract_filename_and_path(char* input, char* filename, char* path)
   }
 
   //after the loop, the pointer should point to the first letter of file name
-  int filename_ptr=filename;
-  strlcpy(filename,ptr,filename_length);
+  //so now we can copy from the first letter to the last letter in the ptr to filename
+  strlcpy(filename,ptr,filename_length+1);
+
+  //the rest should be the path
+  if((strlen(input)-filename_length)>0)
+    strlcpy(path,input, (strlen(input)-filename_length)+1  );
+  else
+    *path='\0';
 
 
 
