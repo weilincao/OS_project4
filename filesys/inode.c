@@ -35,7 +35,7 @@ struct inode_disk
     uint32_t indirect_ptr[NUMBER_OF_INDIRECT_POINTERS];
     uint32_t double_indirect_ptr;
 
-    bool is_directory;
+    bool is_dir;
     off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
   };
@@ -96,6 +96,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
     if(   (num_of_sectors-NUMBER_OF_DIRECT_POINTERS) <  (NUMBER_OF_INDIRECT_POINTERS*NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE)   )
     {
       num_of_sectors_for_indirect_ptr=num_of_sectors-NUMBER_OF_DIRECT_POINTERS;
+
     }
     else
     {
@@ -128,6 +129,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
 
   for(int i =0 ; i<num_of_sectors_for_indirect_ptr; i++)
   {
+    //printf("indirect ptr!!!\n");
     int index_indirect_ptr=i/NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE;
     int index_indirect_ptr_table=i%NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE;
 
@@ -239,7 +241,7 @@ inode_init (void)
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length)
+inode_create (block_sector_t sector, off_t length,bool is_dir)
 {
   struct inode_disk *disk_inode = NULL;
   bool success = false;
@@ -255,6 +257,7 @@ inode_create (block_sector_t sector, off_t length)
     {
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
+      disk_inode->is_dir=is_dir;
       if (grow_file_size (disk_inode, length) )
         {
           block_write (fs_device, sector, disk_inode);//writing the inode

@@ -6,6 +6,7 @@
 #include <stdint.h>
 //#include <process.h>
 
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -105,6 +106,10 @@ struct thread
 
 
 #endif
+
+
+    ///for filesys
+    struct dir* current_working_dir;
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

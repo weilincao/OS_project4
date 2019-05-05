@@ -5,6 +5,7 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/thread.h"
 
 /* A directory. */
 struct dir
@@ -26,7 +27,7 @@ struct dir_entry
 bool
 dir_create (block_sector_t sector, size_t entry_cnt)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  return inode_create (sector, entry_cnt * sizeof (struct dir_entry),true);
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -233,4 +234,54 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
         }
     }
   return false;
+}
+
+
+
+struct dir * get_dir_from_path (char* path){
+/*
+  struct dir* current_dir;
+
+  if(path[0]=='/')
+  {
+    current_dir=dir_open_root();
+  }
+  else
+  {
+    current_dir=thread_current()->current_working_dir;
+  }
+*/
+
+
+
+}
+
+
+void extract_filename_and_path(char* input, char* filename, char* path)
+{
+  //logic behind: the file name is the string between the /0 and the last /
+
+  if(strlen(input)==0)
+  {
+    printf("invalid input: input string length is zero\n");
+  }
+
+  char* ptr= input+ strlen(input)-1; //the pointer points to the last charater
+  int filename_length=0;
+
+
+
+  while( ptr!=input && *(ptr-1) != '/' ) //if pointer is already the first letter of input, stop; if pointer +1 is /, stop as well
+  {
+    filename_length++;
+    ptr--;
+  }
+
+  //after the loop, the pointer should point to the first letter of file name
+  int filename_ptr=filename;
+  strlcpy(filename,ptr,filename_length);
+
+
+
+
 }

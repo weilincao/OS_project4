@@ -306,6 +306,37 @@ syscall_handler (struct intr_frame *f UNUSED)
   		f->eax=fd;
   		break;
   	}
+    //bool chdir (const char *dir)
+    case(SYS_CHDIR):
+    {
+      char* name=*(( int*)(f->esp+4));
+      break;
+
+    }
+    //bool mkdir (const char *dir)
+    case(SYS_MKDIR):{
+      char* name=*(( int*)(f->esp+4));
+
+      break;
+    }
+    //bool readdir (int fd, char *name)
+    case(SYS_READDIR):{
+      int fd=*(( int*)(f->esp+4));
+      char* name=*(( int*)(f->esp+8));
+      break;
+    }
+    //bool isdir (int fd)
+    case(SYS_ISDIR):{
+      int fd=*(( int*)(f->esp+4));
+      break;
+    }
+    //int inumber (int fd)
+    case(SYS_INUMBER):{
+      int fd=*(( int*)(f->esp+4));
+
+      break;
+    }
+
   }
 
   //thread_exit ();
