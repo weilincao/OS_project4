@@ -247,7 +247,7 @@ struct dir * get_dir_from_path (char* path){
   if(path[0]=='/')
   {
     current_dir=dir_open_root();
-    path++;
+    ptr++;
   }
   else
   {
