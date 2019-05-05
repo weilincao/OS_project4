@@ -2,6 +2,7 @@
 
 # Change this to have the test(s) you want to run dir-mkdir
 TEST_FILES='
+grow-dir-lg
 args-none
 grow-file-size
 grow-seq-sm

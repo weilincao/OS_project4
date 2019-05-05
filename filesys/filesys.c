@@ -55,8 +55,8 @@ filesys_create (const char *input, off_t initial_size)
   }
   char path[strlen(input)+1];   
   char filename[strlen(input)+1];
-  extract_filename_and_path(input, filename, path);
-  struct dir* dir=get_dir_from_path(path);
+  //extract_filename_and_path(input, filename, path);
+  //struct dir* dir=get_dir_from_path(path);
 
   //printf("filenames is %s\n", filename);
   //if(*path =='\0')
@@ -64,8 +64,8 @@ filesys_create (const char *input, off_t initial_size)
   //else
   //  printf("path is %s\n", path );
 
+  struct dir *dir = dir_open_root ();
   block_sector_t inode_sector = 0;
-  //struct dir *dir = dir_open_root ();
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size,false)
@@ -93,17 +93,17 @@ filesys_mkdir (const char *input)
   char filename[strlen(input)+1];
 
   extract_filename_and_path(input, filename, path);
-  printf("directory names is %s\n", filename);
-  if(*path =='\0')
-    printf("path is empty!!\n");
-  else
-    printf("path is %s\n", path );
+  //printf("directory names is %s\n", filename);
+  //if(*path =='\0')
+  //  printf("path is empty!!\n");
+  //else
+  //  printf("path is %s\n", path );
 
   struct dir* dir=get_dir_from_path(path);
 
-  if(dir==NULL)
-    printf("oh no!!!\n");
-
+  //if(dir==NULL)
+  //  printf("oh no!!!\n");
+  //struct dir *dir = dir_open_root ();
   block_sector_t inode_sector = 0;
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
@@ -113,10 +113,10 @@ filesys_mkdir (const char *input)
     free_map_release (inode_sector, 1);
   dir_close (dir);
 
-  if(success==true)
-    printf("success!\n");
-  else
-    printf("failed!\n");
+  //if(success==true)
+  //  printf("success!\n");
+  //else
+  //  printf("failed!\n");
   return success;
 }
 
@@ -142,8 +142,8 @@ struct file *
 filesys_open (const char *input)
 {
   //printf("filesys_open!\n");
-  char* path=malloc( (strlen(input)+1) * sizeof(char));
-  char* filename=malloc( (strlen(input)+1) * sizeof(char));
+  //char* path=malloc( (strlen(input)+1) * sizeof(char));
+  //char* filename=malloc( (strlen(input)+1) * sizeof(char));
   //test_extract_filename_and_path(input,path,filename);
 
 

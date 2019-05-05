@@ -637,8 +637,8 @@ setup_stack (void **esp, char* cmd_line)
 
         *esp = (int*)*esp - 1;
         *((int*)*esp) = 0;
-        //free(argvPtrs);
-        //free(argvArr);
+        free(argvPtrs);
+        free(argvArr);
 
 	  }
       else {

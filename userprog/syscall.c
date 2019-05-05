@@ -202,7 +202,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
       if(is_invalid(f->esp+4))
       {
-        printf("invalid!\n");
+        //printf("invalid!\n");
        force_exit();
       }
   	 	char* name=*(( int*)(f->esp+4));
