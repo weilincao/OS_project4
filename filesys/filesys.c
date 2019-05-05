@@ -32,7 +32,7 @@ filesys_init (bool format)
 
   struct thread* current_thread=thread_current();
   current_thread->current_working_dir=dir_open_root();
-  printf("filesys initialized!\n");
+  //printf("filesys initialized!\n");
 }
 
 /* Shuts down the file system module, writing any unwritten data
@@ -51,12 +51,16 @@ bool
 filesys_create (const char *input, off_t initial_size)
 {
   if (strlen(input) == 0){
-    printf("file name is empty!\n");
+    //printf("file name is empty!\n");
+    return false;
   }
   char path[strlen(input)+1];   
   char filename[strlen(input)+1];
-  //extract_filename_and_path(input, filename, path);
-  //struct dir* dir=get_dir_from_path(path);
+  extract_filename_and_path(input, filename, path);
+  if(strlen(filename)==0)
+  {
+    return false;
+  }
 
   //printf("filenames is %s\n", filename);
   //if(*path =='\0')
@@ -64,12 +68,13 @@ filesys_create (const char *input, off_t initial_size)
   //else
   //  printf("path is %s\n", path );
 
-  struct dir *dir = dir_open_root ();
+  struct dir* dir=get_dir_from_path(path);
+  //struct dir *dir = dir_open_root ();
   block_sector_t inode_sector = 0;
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size,false)
-                  && dir_add (dir, input, inode_sector));
+                  && dir_add (dir, filename, inode_sector));
   if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
   dir_close (dir);
@@ -87,12 +92,15 @@ filesys_mkdir (const char *input)
 {
 
   if (strlen(input) == 0){
-    printf("mkdir input is nothing!\n");
+    //printf("mkdir input is nothing!\n");
+    return false;
   }
   char path[strlen(input)+1];   
   char filename[strlen(input)+1];
-
   extract_filename_and_path(input, filename, path);
+
+
+  //printf("current_working_directory is %s\n" thread_current()->current_working_dir->inode->name);
   //printf("directory names is %s\n", filename);
   //if(*path =='\0')
   //  printf("path is empty!!\n");
@@ -127,6 +135,7 @@ filesys_chdir(const char* path)
   if(dir==NULL)
     return false;
 
+  //printf("successfully change path\n");
   thread_current()->current_working_dir=dir;
   return true;
 
@@ -142,20 +151,47 @@ struct file *
 filesys_open (const char *input)
 {
   //printf("filesys_open!\n");
-  //char* path=malloc( (strlen(input)+1) * sizeof(char));
-  //char* filename=malloc( (strlen(input)+1) * sizeof(char));
-  //test_extract_filename_and_path(input,path,filename);
+  if (strlen(input) == 0){
+    //printf("mkdir input is nothing!\n");
+    return false;
+  }
+  char path[strlen(input)+1];   
+  char filename[strlen(input)+1];
+  extract_filename_and_path(input,filename,path);
+  
 
 
-  //struct dir* dir=get_dir_from_path(path);
 
-  struct dir *dir = dir_open_root ();
+  //printf("directory names is %s\n", filename);
+  //if(*path =='\0')
+  //  printf("path is empty!!\n");
+  //else
+  //  printf("path is %s\n", path );
+  struct dir *dir;
+  if(*filename=='/')
+  { 
+    dir= dir_open_root ();
+    file_open(dir_get_inode(dir));
+    return true;
+  }
+  else
+  {
+    dir=get_dir_from_path(path);
+
+  }
+
+  //struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
   
   if (dir != NULL)
-    dir_lookup (dir, input, &inode); // change name to filename 
+    dir_lookup (dir, filename, &inode); // change name to filename 
   dir_close (dir);
 
+
+  if(inode ==NULL)
+  {
+    //printf("oh no! the lookup inode is NULL\n");
+  }
   return file_open (inode);
 }
 
@@ -164,10 +200,24 @@ filesys_open (const char *input)
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 bool
-filesys_remove (const char *name)
+filesys_remove (const char *input)
 {
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
+  
+  char path[strlen(input)+1];   
+  char filename[strlen(input)+1];
+  extract_filename_and_path(input,filename,path);
+  if(strlen(filename)==0)
+  {
+    return false;
+  }
+
+
+  struct dir* dir=get_dir_from_path(path);
+
+
+
+  //struct dir *dir = dir_open_root ();
+  bool success = dir != NULL && dir_remove (dir, filename);
   dir_close (dir);
 
   return success;

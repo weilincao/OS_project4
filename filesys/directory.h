@@ -33,6 +33,7 @@ bool dir_readdir (struct dir *, char name[NAME_MAX + 1]);
 struct dir* get_dir_from_path(char* path);
 void extract_filename_and_path(char* input, char* filename, char* path);
 void test_extract_filename_and_path(char* input, char*filename, char* path);
+bool is_dir_empty(struct dir* dir);
 
 
 #endif /* filesys/directory.h */

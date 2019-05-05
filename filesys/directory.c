@@ -223,6 +223,17 @@ dir_remove (struct dir *dir, const char *name)
   if (inode == NULL)
     goto done;
 
+
+  //check if the directory is empty
+  if (is_inode_dir(inode)) {
+     struct dir *d = dir_open (inode_open(e.inode_sector));
+     bool is_empty = is_dir_empty(d);
+     dir_close (d);
+     if (!is_empty) goto done;
+  }
+
+  
+
   /* Erase directory entry. */
   e.in_use = false;
   if (inode_write_at (dir->inode, &e, sizeof e, ofs) != sizeof e)
@@ -268,11 +279,13 @@ struct dir * get_dir_from_path (char* path){
 
   if(path[0]=='/')
   {
+    //printf("absolute path!\n");
     current_dir=dir_open_root();
     ptr++;
   }
   else
   {
+    //printf("relative path!\n");
     current_dir=dir_reopen(thread_current()->current_working_dir);
     //current_dir=dir_open_root();
 
@@ -288,6 +301,7 @@ struct dir * get_dir_from_path (char* path){
     struct inode *inode;
 
     if(! dir_lookup(current_dir, token, &inode)) {
+      //printf("oh no, the directory does not exist!\n");
       dir_close(current_dir);
       free(path_copy);
       return NULL; // such directory not exist
@@ -306,16 +320,25 @@ struct dir * get_dir_from_path (char* path){
 void extract_filename_and_path(char* input, char* filename, char* path)
 {
   //logic behind: the file name is the string between the /0 and the last /
+
+  //root directory itself as a directory
+  if(strlen(input)==1 && *input == '/')
+  {
+    *filename='/';
+    *(filename+1)='\0';
+    *path='\0';
+    return;
+  }
   
   if(strlen(input)==0)
   {
-    printf("invalid input: input string length is zero\n");
+    //printf("invalid input: input string length is zero\n");
   }
 
   char* ptr= input+ strlen(input)-1; //the pointer points to the last charater
   int filename_length=1;
 
-  while( ptr!=input  ) //if pointer is already the first letter of input, stop; if pointer +1 is /, stop as well && *(ptr-1) != '/'
+  while( ptr!=input&& *(ptr-1) != '/'  ) //if pointer is already the first letter of input, stop; if pointer +1 is /, stop as well 
   {
     filename_length++;
     ptr--;
@@ -335,4 +358,19 @@ void extract_filename_and_path(char* input, char* filename, char* path)
 void test_extract_filename_and_path(char* input, char* filename, char* path)
 {
   
+}
+
+
+bool is_dir_empty(struct dir* dir)
+{
+  struct dir_entry e;
+  int counter = 0;
+  for (int ofs = 0; inode_read_at(dir->inode, &e, sizeof(e), ofs) == sizeof(e); ofs =ofs+ sizeof(e) )
+      if (e.in_use)
+        counter++;
+
+  if(counter==2)
+    return true;
+  else
+    return false;
 }

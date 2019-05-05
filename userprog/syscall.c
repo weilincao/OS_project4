@@ -12,6 +12,7 @@
 #include "threads/thread.h"
 #include "process.h"
 #include <list.h>
+#include "filesys/directory.h"
 /* I put this in the .h file but idk if it's actually what we're supposed to do
 typedef int pid_t;
 */
@@ -118,21 +119,23 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   		
   		if (file_ptr != NULL) {
-
-  			struct thread* current_thread = thread_current();
+        struct thread* current_thread = thread_current();
 			
-			//now add new file descriptor entry into file descriptor table.
-			struct fd_entry* fd_ptr = malloc(sizeof(struct fd_entry));
-			fd_ptr->fd=current_thread->fd_id_counter;;
-			fd=fd_ptr->fd;
-			fd_ptr->file_ptr=file_ptr;
-			list_push_back(&current_thread->fd_table, &fd_ptr->elem);
-			//lock_acquire(&fslock);
-			current_thread->fd_id_counter++; //make sure every new file get a new id;
-			//lock_release(&fslock);
-		}
+			  //now add new file descriptor entry into file descriptor table.
+			  struct fd_entry* fd_ptr = malloc(sizeof(struct fd_entry));
+			  fd_ptr->fd=current_thread->fd_id_counter;;
+			  fd=fd_ptr->fd;
+			  fd_ptr->file_ptr=file_ptr;
+			  list_push_back(&current_thread->fd_table, &fd_ptr->elem);
+			  //lock_acquire(&fslock);
+			  current_thread->fd_id_counter++; //make sure every new file get a new id;
+			  //lock_release(&fslock);
+		  }
+      else
+      {
+        //printf("shit, in syscall_open the fd pointer is NULL\n");
+      }
 		
-  		
   		f->eax=fd;
     	break;
   	}  
@@ -177,11 +180,12 @@ syscall_handler (struct intr_frame *f UNUSED)
 			{
 				//printf("found!\n");
 				struct  fd_entry *fd_ptr = list_entry (e, struct fd_entry, elem);
+
 				lock_acquire(&fslock);
-				f->eax=file_write (fd_ptr->file_ptr, buffer, size);
+				int byte_written=file_write (fd_ptr->file_ptr, buffer, size);
 				lock_release(&fslock);
 
-
+        f->eax=byte_written;
 
 			}
 			break;
@@ -221,6 +225,11 @@ syscall_handler (struct intr_frame *f UNUSED)
   	case(SYS_REMOVE):{
   		if(is_invalid(f->esp+4)) force_exit();
   		char* name=*(( int*)(f->esp+4));
+      lock_acquire(&fslock);
+      bool result = filesys_remove(name);
+      lock_release(&fslock);
+
+      f->eax=result;
   		break;
   	}
   	case(SYS_FILESIZE):{

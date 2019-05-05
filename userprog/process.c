@@ -292,7 +292,7 @@ load (const char *cmd_line, void (**eip) (void), void **esp)
   process_activate ();
 
   //THIS IS WHAT I CHANGED
-  char getFileName[3000];
+  char getFileName[100];
   char* ptr = cmd_line;
   strlcpy(getFileName, cmd_line, sizeof(getFileName));
   char** savePtr = &ptr;

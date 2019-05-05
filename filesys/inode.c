@@ -564,3 +564,8 @@ inode_length (const struct inode *inode)
 {
   return inode->data.length;
 }
+
+bool is_inode_dir(struct inode* inode)
+{
+  return inode->data.is_dir;
+}

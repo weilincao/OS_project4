@@ -2,7 +2,16 @@
 
 # Change this to have the test(s) you want to run dir-mkdir
 TEST_FILES='
-grow-dir-lg
+dir-open
+dir-rm-cwd
+dir-rm-parent
+dir-rm-root
+dir-rm-tree
+dir-rmdir
+dir-vine
+dir-empty-name
+dir-open
+dir-mkdir
 args-none
 grow-file-size
 grow-seq-sm
