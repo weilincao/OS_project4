@@ -90,7 +90,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   	case(SYS_EXEC):
   	{
-  		if(is_invalid(f->esp+4)) force_exit();
+
+      if(is_invalid(f->esp+4)) force_exit();
   		char* cmd_line=*(( int*)(f->esp+4));
 
   		int tid;
@@ -105,7 +106,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   	case(SYS_OPEN): 
   	{
-  		if(is_invalid(f->esp+4)) force_exit();
+  		//printf("syscall open!\n");
+      if(is_invalid(f->esp+4)) force_exit();
   		char* name=*(( int*)(f->esp+4));
   		
   		lock_acquire(&fslock);
@@ -198,7 +200,11 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   	case(SYS_CREATE):{
 
-  		if(is_invalid(f->esp+4)) force_exit();
+      if(is_invalid(f->esp+4))
+      {
+        printf("invalid!\n");
+       force_exit();
+      }
   	 	char* name=*(( int*)(f->esp+4));
       	int size=*(( int*)(f->esp+8));
       	bool created = false;
@@ -310,13 +316,22 @@ syscall_handler (struct intr_frame *f UNUSED)
     case(SYS_CHDIR):
     {
       char* name=*(( int*)(f->esp+4));
+      bool result;
+      lock_acquire(&fslock);
+      result = filesys_chdir(name);
+      lock_release(&fslock);
+      f->eax=result;
       break;
 
     }
     //bool mkdir (const char *dir)
     case(SYS_MKDIR):{
       char* name=*(( int*)(f->esp+4));
-
+      bool result;
+      lock_acquire(&fslock);
+      result = filesys_mkdir(name);
+      lock_release(&fslock);
+      f->eax=result;
       break;
     }
     //bool readdir (int fd, char *name)

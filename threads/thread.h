@@ -6,6 +6,8 @@
 #include <stdint.h>
 //#include <process.h>
 
+struct dir;
+
 
 /* States in a thread's life cycle. */
 enum thread_status

@@ -25,9 +25,30 @@ struct dir_entry
 /* Creates a directory with space for ENTRY_CNT entries in the
    given SECTOR.  Returns true if successful, false on failure. */
 bool
-dir_create (block_sector_t sector, size_t entry_cnt)
+dir_create (block_sector_t sector, struct dir* parent_dir)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry),true);
+  //printf("creating directory!!\n");
+
+  int parent_sector;
+  if(parent_dir==NULL)//for root directory
+    parent_sector=sector;
+  else
+    parent_sector=inode_get_inumber(parent_dir->inode);
+  if(!inode_create (sector, 2* sizeof (struct dir_entry),true))//two for . and ..
+  {
+    printf("directory creation failed!\n");
+    return false;
+  }
+  struct inode *inode = inode_open (sector); //add this into list of inode in RAM(runtime).
+  struct dir * dir = dir_open (inode);
+
+  dir_add (dir, ".", sector);
+  dir_add (dir, "..", parent_sector);
+  dir_close (dir);
+
+  //printf("finish creating!\n");
+  return true;
+
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -241,6 +262,7 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 struct dir * get_dir_from_path (char* path){
 
   char* path_copy=malloc(strlen(path)+1); //because the strtok will modify the string and we probably don't want original path got modify, or do we?
+  strlcpy(path_copy, path, strlen(path)+1);
   char* ptr=path_copy;
   struct dir* current_dir;
 
@@ -252,7 +274,12 @@ struct dir * get_dir_from_path (char* path){
   else
   {
     current_dir=dir_reopen(thread_current()->current_working_dir);
+    //current_dir=dir_open_root();
+
   }
+
+
+
   char *token, *saveptr;
   token = strtok_r(ptr, "/", &saveptr);
 
@@ -261,8 +288,8 @@ struct dir * get_dir_from_path (char* path){
     struct inode *inode;
 
     if(! dir_lookup(current_dir, token, &inode)) {
-      dir_close(cur);
-      free(path);
+      dir_close(current_dir);
+      free(path_copy);
       return NULL; // such directory not exist
     }
     dir_close(current_dir);
@@ -270,7 +297,7 @@ struct dir * get_dir_from_path (char* path){
     token = strtok_r(NULL, "/", &saveptr);
   }
   free(path_copy);
-
+  
   
   return current_dir;
 }
@@ -279,7 +306,7 @@ struct dir * get_dir_from_path (char* path){
 void extract_filename_and_path(char* input, char* filename, char* path)
 {
   //logic behind: the file name is the string between the /0 and the last /
-
+  
   if(strlen(input)==0)
   {
     printf("invalid input: input string length is zero\n");
@@ -288,15 +315,15 @@ void extract_filename_and_path(char* input, char* filename, char* path)
   char* ptr= input+ strlen(input)-1; //the pointer points to the last charater
   int filename_length=1;
 
-  while( ptr!=input && *(ptr-1) != '/' ) //if pointer is already the first letter of input, stop; if pointer +1 is /, stop as well
+  while( ptr!=input  ) //if pointer is already the first letter of input, stop; if pointer +1 is /, stop as well && *(ptr-1) != '/'
   {
     filename_length++;
     ptr--;
   }
-
   //after the loop, the pointer should point to the first letter of file name
   //so now we can copy from the first letter to the last letter in the ptr to filename
   strlcpy(filename,ptr,filename_length+1);
+
 
   //the rest should be the path
   if((strlen(input)-filename_length)>0)
@@ -304,7 +331,8 @@ void extract_filename_and_path(char* input, char* filename, char* path)
   else
     *path='\0';
 
-
-
-
+}
+void test_extract_filename_and_path(char* input, char* filename, char* path)
+{
+  
 }

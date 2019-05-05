@@ -33,6 +33,7 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name)
 {
+  //printf("execute!!!!!!!!!!!!!!!!!!!!!!\n");
   char *fn_copy;
   tid_t tid;
   struct thread *current_thread = thread_current();
@@ -60,6 +61,9 @@ process_execute (const char *file_name)
     {
       return -1;
     }
+    //for file sys
+    child->current_working_dir = dir_reopen(current_thread->current_working_dir); // same current working directory between parent and child!
+
     list_push_back(&current_thread->child_pcb_list, &child->pcb_ptr->elem);
     struct pcb_t * pcb_ptr= child->pcb_ptr; 
     sema_init(&pcb_ptr->wait_sema, 0);

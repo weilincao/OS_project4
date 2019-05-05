@@ -6,6 +6,7 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 
 #define NUMBER_OF_DIRECT_POINTERS 120
@@ -57,6 +58,11 @@ struct inode
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
     struct inode_disk data;             /* Inode content. */
+
+
+    //new
+    struct lock lock_inode;
+
   };
 
 /*
@@ -303,6 +309,10 @@ inode_open (block_sector_t sector)
   inode->deny_write_cnt = 0;
   inode->removed = false;
   block_read (fs_device, inode->sector, &inode->data);
+
+
+  lock_init (&inode->lock_inode);
+
   return inode;
 }
 

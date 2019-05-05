@@ -32,6 +32,7 @@ filesys_init (bool format)
 
   struct thread* current_thread=thread_current();
   current_thread->current_working_dir=dir_open_root();
+  printf("filesys initialized!\n");
 }
 
 /* Shuts down the file system module, writing any unwritten data
@@ -47,14 +48,28 @@ filesys_done (void)
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
 bool
-filesys_create (const char *name, off_t initial_size)
+filesys_create (const char *input, off_t initial_size)
 {
+  if (strlen(input) == 0){
+    printf("file name is empty!\n");
+  }
+  char path[strlen(input)+1];   
+  char filename[strlen(input)+1];
+  extract_filename_and_path(input, filename, path);
+  struct dir* dir=get_dir_from_path(path);
+
+  //printf("filenames is %s\n", filename);
+  //if(*path =='\0')
+  //  printf("path is empty!!\n");
+  //else
+  //  printf("path is %s\n", path );
+
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
+  //struct dir *dir = dir_open_root ();
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size,false)
-                  && dir_add (dir, name, inode_sector));
+                  && dir_add (dir, input, inode_sector));
   if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
   dir_close (dir);
@@ -70,19 +85,52 @@ filesys_create (const char *name, off_t initial_size)
 bool
 filesys_mkdir (const char *input)
 {
+
+  if (strlen(input) == 0){
+    printf("mkdir input is nothing!\n");
+  }
+  char path[strlen(input)+1];   
+  char filename[strlen(input)+1];
+
+  extract_filename_and_path(input, filename, path);
+  printf("directory names is %s\n", filename);
+  if(*path =='\0')
+    printf("path is empty!!\n");
+  else
+    printf("path is %s\n", path );
+
+  struct dir* dir=get_dir_from_path(path);
+
+  if(dir==NULL)
+    printf("oh no!!!\n");
+
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
-                  &&dir_create (inode_sector, 16)
-                  && dir_add (dir, input, inode_sector));
+                  && dir_create (inode_sector, dir)
+                  && dir_add (dir, filename, inode_sector));
   if (!success && inode_sector != 0)
     free_map_release (inode_sector, 1);
   dir_close (dir);
 
+  if(success==true)
+    printf("success!\n");
+  else
+    printf("failed!\n");
   return success;
 }
 
+bool
+filesys_chdir(const char* path)
+{
+  struct dir* dir=get_dir_from_path(path);
+  if(dir==NULL)
+    return false;
+
+  thread_current()->current_working_dir=dir;
+  return true;
+
+} 
 
 
 /* Opens the file with the given NAME.
@@ -91,13 +139,21 @@ filesys_mkdir (const char *input)
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 struct file *
-filesys_open (const char *name)
+filesys_open (const char *input)
 {
+  //printf("filesys_open!\n");
+  char* path=malloc( (strlen(input)+1) * sizeof(char));
+  char* filename=malloc( (strlen(input)+1) * sizeof(char));
+  //test_extract_filename_and_path(input,path,filename);
+
+
+  //struct dir* dir=get_dir_from_path(path);
+
   struct dir *dir = dir_open_root ();
   struct inode *inode = NULL;
-
+  
   if (dir != NULL)
-    dir_lookup (dir, name, &inode);
+    dir_lookup (dir, input, &inode); // change name to filename 
   dir_close (dir);
 
   return file_open (inode);
@@ -123,7 +179,7 @@ do_format (void)
 {
   printf ("Formatting file system...");
   free_map_create ();
-  if (!dir_create (ROOT_DIR_SECTOR, 16))
+  if (!dir_create (ROOT_DIR_SECTOR, NULL))
     PANIC ("root directory creation failed");
   free_map_close ();
   printf ("done.\n");
