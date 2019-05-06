@@ -286,6 +286,9 @@ struct dir * get_dir_from_path (char* path){
   else
   {
     //printf("relative path!\n");
+    if(thread_current()->current_working_dir==NULL)
+      return NULL;
+
     current_dir=dir_reopen(thread_current()->current_working_dir);
     //current_dir=dir_open_root();
 

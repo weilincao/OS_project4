@@ -373,7 +373,7 @@ inode_close (struct inode *inode)
   //lock_release (&inode->lock_inode);
 
   /* Release resources if this was the last opener. */
-  if (--inode->open_cnt == 0)
+  if (inode->open_cnt == 0)
     {
       /* Remove from inode list and release lock. */
       list_remove (&inode->elem);
@@ -575,4 +575,9 @@ inode_length (const struct inode *inode)
 bool is_inode_dir(struct inode* inode)
 {
   return inode->data.is_dir;
+}
+
+int inode_open_cnt(struct inode* inode)
+{
+  return inode->open_cnt;
 }

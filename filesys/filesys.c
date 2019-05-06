@@ -260,6 +260,13 @@ bool
 filesys_remove (const char *input)
 {
   
+  if(strcmp(input, "/")==0)
+  { 
+    //printf(" it is a freaking root directory!\n");
+    return false;
+    
+  }
+
   char path[strlen(input)+1];   
   char filename[strlen(input)+1];
   extract_filename_and_path(input,filename,path);
@@ -273,21 +280,26 @@ filesys_remove (const char *input)
 
 
 
-  //try to prevent removing current working directory here
-  //struct inode* inode1;
-  //dir_lookup (dir, filename, &inode1);
-  //struct inode* inode2=dir_get_inode(thread_current()->current_working_dir);
+  struct inode* inode1;
+  dir_lookup (dir, filename, &inode1);
+  struct inode* inode2=dir_get_inode(thread_current()->current_working_dir);
 
-  //int sector_num1=inode_get_inumber(inode1);
-  //int sector_num2=inode_get_inumber(inode2);
-  //printf("sector_num1, %d\n",sector_num1 );
-  //printf("sector_num2, %d\n",sector_num2 );
-
-  //if(sector_num1==sector_num2)
+  //if(inode_open_cnt(inode1)>0)//if the file is still open, it is not allowed to be remove, but I dont think this will work for multiple process
   //{
   //  dir_close(dir);
   //  return false;
   //}
+
+
+  int sector_num1=inode_get_inumber(inode1);
+  int sector_num2=inode_get_inumber(inode2);
+  //printf("sector_num1, %d\n",sector_num1 );
+  //printf("sector_num2, %d\n",sector_num2 );
+
+  if(sector_num1==sector_num2)
+  {
+    thread_current()->current_working_dir=NULL; // if the removed directory is current working directory.
+  }
 
 
 
