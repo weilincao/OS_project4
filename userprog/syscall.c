@@ -411,6 +411,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     }
     //int inumber (int fd)
     case(SYS_INUMBER):{
+      printf("inumber!!!\n");
       int fd=*(( int*)(f->esp+4));
 
       lock_acquire(&fslock);
@@ -418,9 +419,9 @@ syscall_handler (struct intr_frame *f UNUSED)
 
       int inumber;
       if(fde->file_ptr==NULL)
-        inumber=inode_get_inumber(file_get_inode(fde->file_ptr));
-      else
         inumber=inode_get_inumber(dir_get_inode(fde->dir_ptr));
+      else
+        inumber=inode_get_inumber(file_get_inode(fde->file_ptr));
 
       lock_release(&fslock);
 
