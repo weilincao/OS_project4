@@ -385,9 +385,10 @@ syscall_handler (struct intr_frame *f UNUSED)
 
       //"directory.c:dir_readdir", but somehow I need a struct *dir to 
       //pass it, as well as the name that I already have
+      f->eax = dir_readdir((fd_ptr->dir_ptr), name);
 
       //TEPORARY FIX
-      f->eax = false;
+      //f->eax = false;
       break;
     }
     //bool isdir (int fd)
