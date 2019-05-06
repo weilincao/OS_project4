@@ -412,12 +412,19 @@ syscall_handler (struct intr_frame *f UNUSED)
     //int inumber (int fd)
     case(SYS_INUMBER):{
       int fd=*(( int*)(f->esp+4));
-      int inumber;
 
       lock_acquire(&fslock);
       struct fd_entry* fde=get_fd_entry_by_fd(fd);
-      int result =inode_get_inumber(file_get_inode(fde->file_ptr));
+
+      int inumber;
+      if(fde->file_ptr==NULL)
+        inumber=inode_get_inumber(file_get_inode(fde->file_ptr));
+      else
+        inumber=inode_get_inumber(dir_get_inode(fde->dir_ptr));
+
       lock_release(&fslock);
+
+      f->eax=inumber;
       break;
     }
 
