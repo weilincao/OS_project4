@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Change this to have the test(s) you want to run dir-mkdir
+# Change this to have the test(s) you want to run
 TEST_FILES='
 grow-file-size
 '

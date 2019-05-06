@@ -420,23 +420,16 @@ syscall_handler (struct intr_frame *f UNUSED)
     }
     //bool isdir (int fd)
     case(SYS_ISDIR):{
-      //printf("isdir!\n");
-      bool answer = false;
+      printf("isdir!\n");
+      bool result = false;
       int fd=*(( int*)(f->esp+4));
-  	  if(fd<0)
-  		force_exit();
+  	  		
+      struct fd_entry* fde = get_fd_entry_by_fd(fd);
+	  
+	    result=(fde->file_ptr==NULL);
 
-  	  struct thread* current_thread = thread_current();
-	  struct list_elem* e = elem_with_fd(fd);
-	  if(e == NULL){
-      return false; // return false if fd not found
-    } 
-		
-
-	  struct  fd_entry *fd_ptr = list_entry (e, struct fd_entry, elem);
-	  struct inode *inode = file_get_inode(fd_ptr->file_ptr);
-	  answer = is_inode_dir(inode);
-  	  f->eax=answer;
+  	  f->eax=result;
+      printf("isdir done!\n");
       break;
     }
     //int inumber (int fd)
@@ -445,6 +438,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       int fd=*(( int*)(f->esp+4));
 
       lock_acquire(&fslock);
+
       struct fd_entry* fde=get_fd_entry_by_fd(fd);
 
       int inumber;

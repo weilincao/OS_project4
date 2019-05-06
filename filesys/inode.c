@@ -123,7 +123,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
     if(disk_inode->direct_ptr[i]==0)//if the sector is not yet allocated
     {
       if(! free_map_allocate (1, &disk_inode->direct_ptr[i])){
-        printf("inode bitmap allocate failed during grow file size\n");
+        printf("inode bitmap allocate failed during grow file size1\n");
         return -1;
       }
       block_write (fs_device, disk_inode->direct_ptr[i], zeros);
@@ -146,7 +146,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
     {
       if(! free_map_allocate (1, &disk_inode->indirect_ptr[index_indirect_ptr]))
       {
-      printf("inode bitmap allocate failed during grow file size\n");
+      printf("inode bitmap allocate failed during grow file size2\n");
       return -1;
       }    
       block_write (fs_device, disk_inode->indirect_ptr[index_indirect_ptr], zeros);
@@ -164,7 +164,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
     {
       if(! free_map_allocate (1, &table_buffer->indirect_table_entries[index_indirect_ptr_table]))
       {
-      printf("inode bitmap allocate failed during grow file size\n");
+      printf("inode bitmap allocate failed during grow file size3\n");
       return -1;
       }    
       block_write (fs_device, table_buffer->indirect_table_entries[index_indirect_ptr_table], zeros);
