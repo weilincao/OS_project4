@@ -62,11 +62,11 @@ filesys_create (const char *input, off_t initial_size)
     return false;
   }
 
-  //printf("filenames is %s\n", filename);
+  //printf("create a file called %s ", filename);
   //if(*path =='\0')
-  //  printf("path is empty!!\n");
+  //  printf("at current_working_directory! \n");
   //else
-  //  printf("path is %s\n", path );
+  //  printf("at %s\n", path );
 
   struct dir* dir=get_dir_from_path(path);
   //struct dir *dir = dir_open_root ();
@@ -101,11 +101,11 @@ filesys_mkdir (const char *input)
 
 
   //printf("current_working_directory is %s\n" thread_current()->current_working_dir->inode->name);
-  //printf("directory names is %s\n", filename);
+  //printf("create a directory called %s ", filename);
   //if(*path =='\0')
-  //  printf("path is empty!!\n");
+  //  printf("at current_working_directory! \n");
   //else
-  //  printf("path is %s\n", path );
+  //  printf("at %s\n", path );
 
   struct dir* dir=get_dir_from_path(path);
 
@@ -131,6 +131,8 @@ filesys_mkdir (const char *input)
 bool
 filesys_chdir(const char* path)
 {
+  //printf("change directory to %s\n", path);
+
   struct dir* dir=get_dir_from_path(path);
   if(dir==NULL)
     return false;
@@ -140,8 +142,62 @@ filesys_chdir(const char* path)
   return true;
 
 } 
+/* Opens the file with the given NAME.
+   Returns the new file if successful or a null pointer
+   otherwise.
+   Fails if no file named NAME exists,
+   or if an internal memory allocation fails. */
+struct file *
+filesys_open1 (const char *input)
+{
+
+  if (strlen(input) == 0){
+    //printf("mkdir input is nothing!\n");
+    return false;
+  }
+  char path[strlen(input)+1];   
+  char filename[strlen(input)+1];
+  extract_filename_and_path(input,filename,path);
+  
 
 
+  printf("open at file called %s ", filename);
+  if(*path =='\0')
+    printf("at current_working_directory! \n");
+  else
+    printf("at %s\n", path );
+  struct dir *dir;
+
+  if(strcmp(filename, "/")==0)
+  { 
+    //printf(" it is a freaking root directory!\n");
+    dir= dir_open_root ();
+    return file_open(dir_get_inode(dir));
+    
+  }
+  else
+  {
+    dir=get_dir_from_path(path);
+
+  }
+
+  //struct dir *dir = dir_open_root ();
+  struct inode *inode = NULL;
+  
+  if (dir != NULL)
+    dir_lookup (dir, filename, &inode); // change name to filename 
+  else
+    PANIC("can not find the path!");
+  dir_close (dir);
+
+
+  if(inode ==NULL)
+  {
+    //printf("oh no! the lookup inode is NULL\n");
+    PANIC("open cannot find the inode in the path");
+  }
+  return file_open (inode);
+}
 /* Opens the file with the given NAME.
    Returns the new file if successful or a null pointer
    otherwise.
@@ -150,7 +206,6 @@ filesys_chdir(const char* path)
 struct file *
 filesys_open (const char *input)
 {
-  //printf("filesys_open!\n");
   if (strlen(input) == 0){
     //printf("mkdir input is nothing!\n");
     return false;
@@ -162,15 +217,16 @@ filesys_open (const char *input)
 
 
 
-  //printf("directory names is %s\n", filename);
+  //printf("open at file called %s ", filename);
   //if(*path =='\0')
-  //  printf("path is empty!!\n");
+  //  printf("at current_working_directory! \n");
   //else
-  //  printf("path is %s\n", path );
+  //  printf("at %s\n", path );
   struct dir *dir;
+
   if(strcmp(filename, "/")==0)
   { 
-    printf(" it is a freaking root directory!\n");
+    //printf(" it is a freaking root directory!\n");
     dir= dir_open_root ();
     return file_open(dir_get_inode(dir));
     

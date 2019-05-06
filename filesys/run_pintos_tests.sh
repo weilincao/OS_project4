@@ -2,7 +2,12 @@
 
 # Change this to have the test(s) you want to run
 TEST_FILES='
-grow-file-size
+syn-remove
+write-bad-ptr
+open-bad-ptr
+dir-vine
+grow-tell
+dir-rm-cwd
 '
 
 for file in $TEST_FILES; do

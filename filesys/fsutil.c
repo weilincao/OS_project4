@@ -182,7 +182,7 @@ fsutil_append (char **argv)
     PANIC ("couldn't allocate buffer");
 
   /* Open source file. */
-  src = filesys_open (file_name);
+  src = filesys_open1 (file_name);
   if (src == NULL)
     PANIC ("%s: open failed", file_name);
   size = file_length (src);

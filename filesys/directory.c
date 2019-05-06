@@ -355,10 +355,6 @@ void extract_filename_and_path(char* input, char* filename, char* path)
     *path='\0';
 
 }
-void test_extract_filename_and_path(char* input, char* filename, char* path)
-{
-  
-}
 
 
 bool is_dir_empty(struct dir* dir)

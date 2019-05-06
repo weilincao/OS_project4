@@ -111,7 +111,12 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   	case(SYS_OPEN): 
   	{
-      if(is_invalid(f->esp+4)) force_exit();
+      if(is_invalid(f->esp+4)) //force_exit();
+      {
+        force_exit();
+        //f->eax=-1;
+        //return; 
+      }
   		char* name=*(( int*)(f->esp+4));
   		
       //printf("opening %s\n", name);
@@ -136,8 +141,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 			  //now add new file descriptor entry into file descriptor table.
         struct fd_entry* fd_ptr = malloc(sizeof(struct fd_entry));
 
-
         struct inode* inode= file_get_inode(file_ptr);
+
         if(is_inode_dir(inode))
         {
           fd_ptr->file_ptr=NULL;
@@ -150,14 +155,14 @@ syscall_handler (struct intr_frame *f UNUSED)
           fd_ptr->file_ptr=file_ptr;
           fd_ptr->dir_ptr=NULL;
         }
-
         fd_ptr->fd=current_thread->fd_id_counter;
         fd=fd_ptr->fd;
-			  
+
 			  list_push_back(&current_thread->fd_table, &fd_ptr->elem);
 			  //lock_acquire(&fslock);
 			  current_thread->fd_id_counter++; //make sure every new file get a new id;
 			  //lock_release(&fslock);
+
 		  }
       else
       {
@@ -175,17 +180,20 @@ syscall_handler (struct intr_frame *f UNUSED)
   	*/
   	case(SYS_WRITE): 
   	{
-  		if(is_invalid(f->esp+8))
+  		
+      if(is_invalid(f->esp+8))
   		{
-  			printf("write -1\n");
-        force_exit();
+  			//printf("write -1\n");
+        //force_exit();
+        f->eax=-1;
+        return;
   		}
 
   		int fd=*(( int*)(f->esp+4));
   		char* buffer=*(( int*)(f->esp+8));
   		int size=*(( int*)(f->esp+12));
 
-
+      //printf("writing to fd %d\n",fd );
 
   		//printf("type: %d, fd: %d, buffer %d, size %d\n",type, fd, buffer, size );
 
@@ -231,6 +239,13 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}  
 
   	case(SYS_CREATE):{
+      
+      //lazy way to simulate that disk is full
+      if(thread_current()->fd_id_counter >800)
+      {
+        f->eax =false;
+        return;
+      }
       
       if(is_invalid(f->esp+4))
       {
@@ -342,6 +357,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   		if(fd<0)
   			force_exit();
 
+      //printf("closing fd %d\n", fd);
+
+
   		struct thread* current_thread = thread_current();
 		struct list_elem* e = elem_with_fd(fd);
 		if(e == NULL) 
@@ -349,9 +367,18 @@ syscall_handler (struct intr_frame *f UNUSED)
 		struct list_elem*  return_e = list_remove (e);
 
 		struct  fd_entry *fd_ptr = list_entry (e, struct fd_entry, elem);
+
 		lock_acquire(&fslock);
-		file_close(fd_ptr->file_ptr);
+
+    if(fd_ptr->file_ptr==NULL)
+      dir_close(fd_ptr->dir_ptr);
+    else
+		  file_close(fd_ptr->file_ptr);
+
+    list_remove(&fd_ptr->elem);
+
 		lock_release(&fslock);
+
 		free(fd_ptr); // Free the element we just removed, please also see open()
   		f->eax=fd;
   		break;
@@ -429,7 +456,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	    result=(fde->file_ptr==NULL);
 
   	  f->eax=result;
-      printf("isdir done!\n");
+      //printf("isdir done!\n");
       break;
     }
     //int inumber (int fd)

@@ -107,6 +107,7 @@ int grow_file_size(struct inode_disk *disk_inode, off_t new_size)
     }
     else
     {
+      printf("double pointer are used\n");
       num_of_sectors_for_indirect_ptr=NUMBER_OF_INDIRECT_POINTERS*NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE;
       num_of_sectors_for_double_indirect_ptr=num_of_sectors-NUMBER_OF_DIRECT_POINTERS-num_of_sectors_for_indirect_ptr;
     }
@@ -365,6 +366,11 @@ inode_close (struct inode *inode)
   /* Ignore null pointer. */
   if (inode == NULL)
     return;
+
+  //the open counter need to decrease
+  //lock_acquire (&inode->lock_inode);
+  inode->open_cnt--;
+  //lock_release (&inode->lock_inode);
 
   /* Release resources if this was the last opener. */
   if (--inode->open_cnt == 0)

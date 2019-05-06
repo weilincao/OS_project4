@@ -108,7 +108,19 @@ check_sector (struct block *block, block_sector_t sector)
     {
       /* We do not use ASSERT because we want to panic here
          regardless of whether NDEBUG is defined. */
-      PANIC ("Access past end of device %s (sector=%"PRDSNu", "
+      PANIC ("read Access past end of device %s (sector=%"PRDSNu", "
+             "size=%"PRDSNu")\n", block_name (block), sector, block->size);
+    }
+}
+
+static void
+check_sector1 (struct block *block, block_sector_t sector)
+{
+  if (sector >= block->size)
+    {
+      /* We do not use ASSERT because we want to panic here
+         regardless of whether NDEBUG is defined. */
+      PANIC ("write Access past end of device %s (sector=%"PRDSNu", "
              "size=%"PRDSNu")\n", block_name (block), sector, block->size);
     }
 }
@@ -133,7 +145,7 @@ block_read (struct block *block, block_sector_t sector, void *buffer)
 void
 block_write (struct block *block, block_sector_t sector, const void *buffer)
 {
-  check_sector (block, sector);
+  check_sector1 (block, sector);
   ASSERT (block->type != BLOCK_FOREIGN);
   block->ops->write (block->aux, sector, buffer);
   block->write_cnt++;
