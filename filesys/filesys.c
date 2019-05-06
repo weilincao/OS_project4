@@ -168,11 +168,12 @@ filesys_open (const char *input)
   //else
   //  printf("path is %s\n", path );
   struct dir *dir;
-  if(*filename=='/')
+  if(strcmp(filename, "/")==0)
   { 
+    printf(" it is a freaking root directory!\n");
     dir= dir_open_root ();
-    file_open(dir_get_inode(dir));
-    return true;
+    return file_open(dir_get_inode(dir));
+    
   }
   else
   {
@@ -213,6 +214,24 @@ filesys_remove (const char *input)
 
 
   struct dir* dir=get_dir_from_path(path);
+
+
+
+  //try to prevent removing current working directory here
+  //struct inode* inode1;
+  //dir_lookup (dir, filename, &inode1);
+  //struct inode* inode2=dir_get_inode(thread_current()->current_working_dir);
+
+  //int sector_num1=inode_get_inumber(inode1);
+  //int sector_num2=inode_get_inumber(inode2);
+  //printf("sector_num1, %d\n",sector_num1 );
+  //printf("sector_num2, %d\n",sector_num2 );
+
+  //if(sector_num1==sector_num2)
+  //{
+  //  dir_close(dir);
+  //  return false;
+  //}
 
 
 

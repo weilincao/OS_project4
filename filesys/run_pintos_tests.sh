@@ -2,9 +2,7 @@
 
 # Change this to have the test(s) you want to run dir-mkdir
 TEST_FILES='
-dir-empty-name
-dir-rm-cwd
-dir-vine
+grow-file-size
 '
 
 for file in $TEST_FILES; do

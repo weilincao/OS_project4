@@ -111,10 +111,18 @@ syscall_handler (struct intr_frame *f UNUSED)
 
   	case(SYS_OPEN): 
   	{
-  		//printf("syscall open!\n");
       if(is_invalid(f->esp+4)) force_exit();
   		char* name=*(( int*)(f->esp+4));
   		
+      //printf("opening %s\n", name);
+
+      //if(strcmp(name, ".")==0||strcmp(name, "..")==0)
+      //{
+      //  f->eax=-1;
+      //  return;
+      //}
+
+
   		lock_acquire(&fslock);
   		struct file* file_ptr = filesys_open(name);
   		lock_release(&fslock);
@@ -223,7 +231,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	}  
 
   	case(SYS_CREATE):{
-
+      
       if(is_invalid(f->esp+4))
       {
         //printf("invalid!\n");
@@ -231,6 +239,10 @@ syscall_handler (struct intr_frame *f UNUSED)
       }
   	 	char* name=*(( int*)(f->esp+4));
       	int size=*(( int*)(f->esp+8));
+
+        //printf("create a file called %s\n", name);
+
+
       	bool created = false;
   		
       	lock_acquire(&fslock);
@@ -245,6 +257,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   	case(SYS_REMOVE):{
   		if(is_invalid(f->esp+4)) force_exit();
   		char* name=*(( int*)(f->esp+4));
+      //printf("remove %s\n", name);
+
+
       lock_acquire(&fslock);
       bool result = filesys_remove(name);
       lock_release(&fslock);
@@ -325,7 +340,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   		int fd=*(( int*)(f->esp+4));
   		int size=*(( int*)(f->esp+8));
   		if(fd<0)
-  			force_exit;
+  			force_exit();
 
   		struct thread* current_thread = thread_current();
 		struct list_elem* e = elem_with_fd(fd);
@@ -345,6 +360,9 @@ syscall_handler (struct intr_frame *f UNUSED)
     case(SYS_CHDIR):
     {
       char* name=*(( int*)(f->esp+4));
+
+      //printf("change directory to %s\n", name);
+
       bool result;
       lock_acquire(&fslock);
       result = filesys_chdir(name);
@@ -356,6 +374,10 @@ syscall_handler (struct intr_frame *f UNUSED)
     //bool mkdir (const char *dir)
     case(SYS_MKDIR):{
       char* name=*(( int*)(f->esp+4));
+
+      //printf("mkdir!! make a directory call %s\n", name);
+
+
       bool result;
       lock_acquire(&fslock);
       result = filesys_mkdir(name);
@@ -365,43 +387,51 @@ syscall_handler (struct intr_frame *f UNUSED)
     }
     //bool readdir (int fd, char *name)
     case(SYS_READDIR):{
+      //printf("readdir\n");
       int fd=*(( int*)(f->esp+4));
       char* name=*(( int*)(f->esp+8));
       if(fd < 0){
-      	force_exit;
+      	force_exit();
       }
 
       struct thread* current_thread = thread_current();
       struct list_elem* e = elem_with_fd(fd);
       if(e == NULL){
-      	force_exit;
+      	force_exit();
       }
 
       struct fd_entry *fd_ptr = list_entry(e, struct fd_entry, elem);
-      struct inode *inode = file_get_inode(fd_ptr->file_ptr);
+      struct inode *inode = dir_get_inode(fd_ptr->dir_ptr);
+
       if(!is_inode_dir(inode)){
-      	force_exit;
+        //printf("oh no!!! readdir failed!\n");
+      	force_exit();
       } 
 
-      //"directory.c:dir_readdir", but somehow I need a struct *dir to 
-      //pass it, as well as the name that I already have
-      f->eax = dir_readdir((fd_ptr->dir_ptr), name);
+      bool result= dir_readdir((fd_ptr->dir_ptr), name);
+      //if(result==true)
+      //  printf("readdir is good!\n");
+      //else
+      //  printf("ohno!\n");
 
-      //TEPORARY FIX
-      //f->eax = false;
+      f->eax = result;
+
       break;
     }
     //bool isdir (int fd)
     case(SYS_ISDIR):{
+      //printf("isdir!\n");
       bool answer = false;
       int fd=*(( int*)(f->esp+4));
   	  if(fd<0)
-  		force_exit;
+  		force_exit();
 
   	  struct thread* current_thread = thread_current();
 	  struct list_elem* e = elem_with_fd(fd);
-	  if(e == NULL) 
-		return false; // return false if fd not found
+	  if(e == NULL){
+      return false; // return false if fd not found
+    } 
+		
 
 	  struct  fd_entry *fd_ptr = list_entry (e, struct fd_entry, elem);
 	  struct inode *inode = file_get_inode(fd_ptr->file_ptr);
@@ -411,7 +441,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     }
     //int inumber (int fd)
     case(SYS_INUMBER):{
-      printf("inumber!!!\n");
+      //sprintf("inumber! \n");
       int fd=*(( int*)(f->esp+4));
 
       lock_acquire(&fslock);
