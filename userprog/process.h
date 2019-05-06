@@ -19,6 +19,7 @@ struct fd_entry
 	int fd;
 	struct list_elem elem;
 	struct file* file_ptr;
+	struct dir* dir_ptr;
 
 };
 

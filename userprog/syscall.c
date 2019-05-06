@@ -16,7 +16,7 @@
 /* I put this in the .h file but idk if it's actually what we're supposed to do
 typedef int pid_t;
 */
-
+static struct fd_entry* get_fd_entry_by_fd(int fd);
 static void syscall_handler (struct intr_frame *);
 void force_exit();
 static bool is_invalid(void* stack_ptr);
@@ -122,10 +122,26 @@ syscall_handler (struct intr_frame *f UNUSED)
         struct thread* current_thread = thread_current();
 			
 			  //now add new file descriptor entry into file descriptor table.
-			  struct fd_entry* fd_ptr = malloc(sizeof(struct fd_entry));
-			  fd_ptr->fd=current_thread->fd_id_counter;;
-			  fd=fd_ptr->fd;
-			  fd_ptr->file_ptr=file_ptr;
+        struct fd_entry* fd_ptr = malloc(sizeof(struct fd_entry));
+
+
+        struct inode* inode= file_get_inode(file_ptr);
+        if(is_inode_dir(inode))
+        {
+          fd_ptr->file_ptr=NULL;
+          struct dir* dir = dir_open(inode_reopen(inode));
+          fd_ptr->dir_ptr = dir;
+          file_close(file_ptr); 
+        }
+        else
+        {
+          fd_ptr->file_ptr=file_ptr;
+          fd_ptr->dir_ptr=NULL;
+        }
+
+        fd_ptr->fd=current_thread->fd_id_counter;
+        fd=fd_ptr->fd;
+			  
 			  list_push_back(&current_thread->fd_table, &fd_ptr->elem);
 			  //lock_acquire(&fslock);
 			  current_thread->fd_id_counter++; //make sure every new file get a new id;
@@ -357,7 +373,12 @@ syscall_handler (struct intr_frame *f UNUSED)
     //int inumber (int fd)
     case(SYS_INUMBER):{
       int fd=*(( int*)(f->esp+4));
+      int inumber;
 
+      lock_acquire(&fslock);
+      struct fd_entry* fde=get_fd_entry_by_fd(fd);
+      int result =inode_get_inumber(file_get_inode(fde->file_ptr));
+      lock_release(&fslock);
       break;
     }
 
@@ -443,10 +464,9 @@ static struct list_elem* elem_with_fd(int fd){
   	return NULL;
 }
 
-static int get_user (const uint8_t *uaddr)
-{
-  int result;
-  asm ("movl $1f, %0; movzbl %1, %0; 1:"
-       : "=&a" (result) : "m" (*uaddr));
-  return result;
+
+static struct fd_entry* get_fd_entry_by_fd(int fd) {
+  struct list_elem* e= elem_with_fd(fd);
+  return list_entry(e, struct fd_entry, elem);
+
 }
