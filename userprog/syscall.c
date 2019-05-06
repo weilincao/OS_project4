@@ -6,6 +6,7 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <stdlib.h>
 //#include <unistd.h>
 //#include <sys/types.h>
 #include "threads/interrupt.h"
@@ -13,6 +14,9 @@
 #include "process.h"
 #include <list.h>
 #include "filesys/directory.h"
+#include "filesys/file.h"
+#include "userprog/process.h"
+#include "filesys/filesys.h"
 /* I put this in the .h file but idk if it's actually what we're supposed to do
 typedef int pid_t;
 */
@@ -363,11 +367,45 @@ syscall_handler (struct intr_frame *f UNUSED)
     case(SYS_READDIR):{
       int fd=*(( int*)(f->esp+4));
       char* name=*(( int*)(f->esp+8));
+      if(fd < 0){
+      	force_exit;
+      }
+
+      struct thread* current_thread = thread_current();
+      struct list_elem* e = elem_with_fd(fd);
+      if(e == NULL){
+      	force_exit;
+      }
+
+      struct fd_entry *fd_ptr = list_entry(e, struct fd_entry, elem);
+      struct inode *inode = file_get_inode(fd_ptr->file_ptr);
+      if(!is_inode_dir(inode)){
+      	force_exit;
+      } 
+
+      //"directory.c:dir_readdir", but somehow I need a struct *dir to 
+      //pass it, as well as the name that I already have
+
+      //TEPORARY FIX
+      f->eax = false;
       break;
     }
     //bool isdir (int fd)
     case(SYS_ISDIR):{
+      bool answer = false;
       int fd=*(( int*)(f->esp+4));
+  	  if(fd<0)
+  		force_exit;
+
+  	  struct thread* current_thread = thread_current();
+	  struct list_elem* e = elem_with_fd(fd);
+	  if(e == NULL) 
+		return false; // return false if fd not found
+
+	  struct  fd_entry *fd_ptr = list_entry (e, struct fd_entry, elem);
+	  struct inode *inode = file_get_inode(fd_ptr->file_ptr);
+	  answer = is_inode_dir(inode);
+  	  f->eax=answer;
       break;
     }
     //int inumber (int fd)

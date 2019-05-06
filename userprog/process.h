@@ -4,6 +4,7 @@
 #include "threads/thread.h"
 #include "threads/synch.h"//for sema
 #include "filesys/file.h"
+#include <stdlib.h>
 
 
 tid_t process_execute (const char *file_name);
