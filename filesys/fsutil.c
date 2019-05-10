@@ -166,6 +166,7 @@ fsutil_extract (char **argv UNUSED)
 void
 fsutil_append (char **argv)
 {
+  
   static block_sector_t sector = 0;
 
   const char *file_name = argv[1];
@@ -176,28 +177,28 @@ fsutil_append (char **argv)
 
   printf ("Appending '%s' to ustar archive on scratch device...\n", file_name);
 
-  /* Allocate buffer. */
+  // Allocate buffer. 
   buffer = malloc (BLOCK_SECTOR_SIZE);
   if (buffer == NULL)
     PANIC ("couldn't allocate buffer");
 
-  /* Open source file. */
+  // Open source file.
   src = filesys_open1 (file_name);
   if (src == NULL)
     PANIC ("%s: open failed", file_name);
   size = file_length (src);
 
-  /* Open target block device. */
+  // Open target block device.
   dst = block_get_role (BLOCK_SCRATCH);
   if (dst == NULL)
     PANIC ("couldn't open scratch device");
 
-  /* Write ustar header to first sector. */
+  // Write ustar header to first sector.
   if (!ustar_make_header (file_name, USTAR_REGULAR, size, buffer))
     PANIC ("%s: name too long for ustar format", file_name);
   block_write (dst, sector++, buffer);
 
-  /* Do copy. */
+  // Do copy. 
   while (size > 0)
     {
       int chunk_size = size > BLOCK_SECTOR_SIZE ? BLOCK_SECTOR_SIZE : size;
@@ -210,14 +211,15 @@ fsutil_append (char **argv)
       size -= chunk_size;
     }
 
-  /* Write ustar end-of-archive marker, which is two consecutive
-     sectors full of zeros.  Don't advance our position past
-     them, though, in case we have more files to append. */
-  memset (buffer, 0, BLOCK_SECTOR_SIZE);
-  block_write (dst, sector, buffer);
-  block_write (dst, sector, buffer + 1);
+  // Write ustar end-of-archive marker, which is two consecutive
+  //   sectors full of zeros.  Don't advance our position past
+  //   them, though, in case we have more files to append. 
+    memset (buffer, 0, BLOCK_SECTOR_SIZE);
+    block_write (dst, sector, buffer);
+    block_write (dst, sector, buffer + 1);
 
-  /* Finish up. */
+  // Finish up. 
   file_close (src);
   free (buffer);
+  
 }

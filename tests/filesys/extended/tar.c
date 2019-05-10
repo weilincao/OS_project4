@@ -20,7 +20,7 @@ main (int argc, char *argv[])
 
   bool result=(make_tar_archive (argv[1], argv + 2, argc - 2)
           ? EXIT_SUCCESS : EXIT_FAILURE);
-
+  //bool result= true;
   if(result==EXIT_SUCCESS)
     printf("tar success\n");
   else
@@ -130,13 +130,22 @@ archive_file (char file_name[], size_t file_name_size,
           printf("a231!\n");
 
           if (!isdir (file_fd))
+          {
             success = archive_ordinary_file (file_name, file_fd,
                                              archive_fd, write_error);
-          
+            //success=true;
+            //printf("I am trying not to archive file\n");
+            printf("do nothing for file\n");
+          }
+            
 
-          else
+          else{
+
             success = archive_directory (file_name, file_name_size, file_fd,
                                          archive_fd, write_error);
+            //success=true;
+            //printf("do nothing for directory\n");
+          }
 
           printf("a24!\n");
                                      
@@ -166,6 +175,7 @@ static bool
 archive_ordinary_file (const char *file_name, int file_fd,
                        int archive_fd, bool *write_error)
 {
+  printf("archive regular file %s\n", file_name );
   printf("ao 1\n");
 
   bool read_error = false;
@@ -206,6 +216,7 @@ static bool
 archive_directory (char file_name[], size_t file_name_size, int file_fd,
                    int archive_fd, bool *write_error)
 {
+  printf("archive directory name %s\n", file_name);
   size_t dir_len;
   bool success = true;
   printf("ad 1\n");
@@ -217,8 +228,8 @@ archive_directory (char file_name[], size_t file_name_size, int file_fd,
     }
   printf("ad 2\n");
   
-  if (!write_header (file_name, USTAR_DIRECTORY, 0, archive_fd, write_error))
-    return false;
+  //if (!write_header (file_name, USTAR_DIRECTORY, 0, archive_fd, write_error))
+  //  return false;
   printf("ad 3\n");
       
   file_name[dir_len] = '/';

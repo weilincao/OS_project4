@@ -8,9 +8,8 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+Clara Johnson <clarajohnson986@utexas.edu>
+Weilin Cao <weilincao@utexas.edu>
 
 ---- PRELIMINARIES ----
 
@@ -30,8 +29,51 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+
+#define NUMBER_OF_DIRECT_POINTERS 120
+#define NUMBER_OF_INDIRECT_POINTERS 4
+#define NUMBER_OF_DOUBLE_INDIRECT_POINTERS 1
+#define NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE 128 //512/4
+
+/*
+used for table allocated by single/double indirect pointers
+*/
+struct indirect_table{
+  uint32_t indirect_table_entries[NUMBER_OF_POINTERS_PER_INDIRECT_POINTER_TABLE];
+};
+
+
+/* On-disk inode.
+   Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+struct inode_disk
+  {
+    //block_sector_t start;               /* First data sector. */
+
+    uint32_t direct_ptr[NUMBER_OF_DIRECT_POINTERS]; //self explanatory
+    uint32_t indirect_ptr[NUMBER_OF_INDIRECT_POINTERS]; 
+    uint32_t double_indirect_ptr;
+
+    bool is_dir;	//used to tell if it is a directory
+    off_t length;                       /* File size in bytes. */
+    unsigned magic;                     /* Magic number. */
+  };
+
+
 >> A2: What is the maximum size of a file supported by your inode
 >> structure?  Show your work.
+
+we have 120 direct pointers, 4 indirect pointer, and 1 double indirect pointer.
+each direct pointer points to a sector which is 512 byte, there are 120 of them, 
+so 512*120, which is about 61kb.
+and we have 4 indirect points, which points to a table with 128 direct pointers.
+so 4*128*512,which is about 262kb
+we have only one indirect pointer, which points to 128 pointers tables and each table contains
+128 entries, so it is 128*128*512, which is about 8.3mb
+together, the maximum file size is about 8.6 mb(if hard disk has enough space).
+
+
+
+
 
 ---- RATIONALE ----
 
@@ -40,6 +82,16 @@ FirstName LastName <email@domain.example>
 >> indirect blocks?  If not, why did you choose an alternative inode
 >> structure, and what advantages and disadvantages does your
 >> structure have, compared to a multilevel index?
+
+we have 120 direct pointers, 4 indirect pointer, and 1 double indirect pointer.
+the goal is to support maximum file size while maintaining performance at the same time.
+1 double indirect pointer pretty enough cause it can support up to 8.6 mb yet the total disk size
+is less than 8 mb, but we dont want to use double indirect pointer most of the time because
+it requires a lot more acess to the disk, so we use 120 direct points for quicker access for file
+less than 61 kb in size. and 4 indirect pointer for medium speed access of file that has size 
+between 61kb to 262 kb.
+
+
 
 			    SUBDIRECTORIES
 			    ==============
@@ -50,15 +102,38 @@ FirstName LastName <email@domain.example>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+
+no struct are created or modified for subdirectories implementation
+
 ---- ALGORITHMS ----
 
 >> B2: Describe your code for traversing a user-specified path.  How
 >> do traversals of absolute and relative paths differ?
 
+main difference between abosolute path and relative path is that 
+absolute path start with root directory '/'
+if the first character of the path is not '/', then it is relative path.
+relative path start with current working directory.
+
+their traversal process is pretty much identical beside this subtle difference.
+our way of traversal is to start with either root or current working directory.
+we then use strtok with delimitor set to '/' to obtain next file/directory name
+then we seach the name inside the directory we are in. if we found it, we obtain
+the next token from the path and search the name inside the directory we found last time.
+repeat the process until there is no token left.
+
+
 ---- RATIONALE ----
 
 >> B6: Explain why you chose to represent the current directory of a
 >> process the way you did.
+
+the current directory is independent between each thread. 
+Therefore, it is very fitting to put a dir pointer inside the thread struct 
+that can points to the current working directory of this thread.
+
+
+
 
 			   SURVEY QUESTIONS
 			   ================
